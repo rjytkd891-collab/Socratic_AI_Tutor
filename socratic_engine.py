@@ -24,7 +24,7 @@ class SocraticEngine:
             )
 
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-3.5 Flash-Lite"
+        self.model = "gemini-3.8-flash"
 
         # Số lần thử lại tối đa sau lần gọi đầu tiên
         self.max_retries = 2
