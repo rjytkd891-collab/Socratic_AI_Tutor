@@ -1,11 +1,5 @@
 import streamlit as st
-
 from socratic_engine import SocraticEngine
-
-
-# =========================
-# CẤU HÌNH TRANG
-# =========================
 
 st.set_page_config(
     page_title="Socratic AI Tutor",
@@ -13,226 +7,190 @@ st.set_page_config(
     layout="centered",
 )
 
+# GIAO DIEN: LORA + BE VIETNAM PRO
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
 
-# =========================
-# TIÊU ĐỀ
-# =========================
+    html, body, .stApp,
+    [class*="css"], p, div, span,
+    label, input, textarea, button {
+        font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
+    }
 
-st.title("🌱 Socratic AI Tutor")
+    h1, h2, h3 {
+        font-family: 'Lora', Georgia, serif !important;
+        font-weight: 600;
+    }
 
-st.caption(
-    "Hiểu sâu hơn bằng câu hỏi · "
-    "Tự tư duy · Tự lập luận · Tự hình thành câu trả lời"
+    .stApp {
+        background-color: #F8F7F2;
+        color: #26352E;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #E8EEE7;
+    }
+
+    [data-testid="stChatMessage"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E1E7DF;
+        border-radius: 14px;
+        padding: 1rem;
+        line-height: 1.8;
+    }
+
+    textarea, input {
+        font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
+    }
+
+    .stButton > button {
+        border-radius: 10px;
+        border: 1px solid #B7C7B8;
+        color: #26352E;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
+# TIEU DE
+st.title("Socratic AI Tutor")
 
-# =========================
-# KHỞI TẠO LỊCH SỬ CHAT
-# =========================
+st.caption(
+    "Tư duy sâu hơn qua câu hỏi · "
+    "Tự lập luận · Tự hình thành câu trả lời"
+)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-
-# =========================
-# KHỞI TẠO AI ENGINE
-# =========================
-
-if "engine" not in st.session_state:
-    try:
-        st.session_state.engine = SocraticEngine()
-
-    except Exception as error:
-        st.error("Không thể khởi tạo AI.")
-
-        with st.expander("🔧 Chi tiết lỗi kỹ thuật"):
-            st.code(str(error))
-
-        st.stop()
-
-
-# =========================
-# SIDEBAR
-# =========================
-
+# THANH BEN: GIOI THIEU DU AN
 with st.sidebar:
-
-    st.subheader("🧠 Socratic Tutor")
+    st.header("Về dự án")
 
     st.write(
-        "Gia sư sẽ gợi mở từng bước "
-        "thay vì làm bài thay cậu."
+        "Socratic AI Tutor là gia sư gợi mở, "
+        "giúp người học tự suy nghĩ thay vì nhận "
+        "ngay đáp án hoàn chỉnh."
     )
 
-    st.divider()
+    st.subheader("5 cấp độ câu hỏi")
 
-    st.caption("Hệ thống gồm 5 cấp độ:")
+    st.markdown(
+        """
+        1. **Làm rõ vấn đề**
+        2. **Khám phá giả định**
+        3. **Phân tích bằng chứng**
+        4. **Góc nhìn đa chiều**
+        5. **Đánh giá và tổng hợp**
+        """
+    )
 
-    st.caption("1️⃣ Làm rõ vấn đề")
-    st.caption("2️⃣ Khám phá giả định")
-    st.caption("3️⃣ Phân tích bằng chứng")
-    st.caption("4️⃣ Góc nhìn đa chiều")
-    st.caption("5️⃣ Đánh giá và tổng hợp")
+    st.caption(
+        "AI hỗ trợ tư duy; người học vẫn là "
+        "người đưa ra kết luận."
+    )
 
-    st.divider()
-
-    if st.button(
-        "🔄 Bắt đầu lại",
-        use_container_width=True
-    ):
+    if st.button("↻ Bắt đầu mới", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
+# KHOI TAO TRO CHUYEN
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# =========================
-# HIỂN THỊ LỊCH SỬ CHAT
-# =========================
+if "engine" not in st.session_state:
+    st.session_state.engine = SocraticEngine()
 
-for message in st.session_state.messages:
+# KHUNG CHAT
+st.subheader("Không gian trò chuyện")
 
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-
-# =========================
-# Ô NHẬP CÂU HỎI
-# =========================
-
-question = st.chat_input(
-    "Nhập câu hỏi hoặc suy nghĩ của cậu..."
+st.write(
+    "Hãy chia sẻ câu hỏi hoặc suy nghĩ của cậu. "
+    "Mình sẽ đồng hành bằng những câu hỏi gợi mở."
 )
 
+# HIEN THI LICH SU CHAT
+for message in st.session_state.messages:
+    avatar = "🌱" if message["role"] == "assistant" else "👤"
 
-# =========================
-# XỬ LÝ CÂU HỎI
-# =========================
+    with st.chat_message(message["role"], avatar=avatar):
+        st.markdown(message["content"])
+
+# NHAN CAU HOI
+question = st.chat_input(
+    "Nhập câu hỏi hoặc chia sẻ suy nghĩ của cậu..."
+)
 
 if question:
-
-    # Lưu lịch sử trước lượt hỏi mới
-    history = st.session_state.messages.copy()
-
-    # Hiển thị câu hỏi của học sinh
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="👤"):
         st.markdown(question)
 
-    # AI trả lời
-    with st.chat_message("assistant"):
+    history = st.session_state.messages.copy()
 
+    with st.chat_message("assistant", avatar="🌱"):
         response_placeholder = st.empty()
         full_response = ""
 
         try:
-
-            # Hiển thị trạng thái chờ
-            response_placeholder.markdown(
-                "🧠 **Gia sư đang suy nghĩ...**"
-            )
-
-            # =========================
-            # STREAMING RESPONSE
-            # =========================
-
             for chunk in st.session_state.engine.ask_stream(
                 question=question,
                 history=history,
             ):
-
-                if chunk:
-                    full_response += chunk
-
-                    response_placeholder.markdown(
-                        full_response + "▌"
-                    )
-
-            # =========================
-            # HOÀN TẤT PHẢN HỒI
-            # =========================
-
-            if full_response.strip():
+                full_response += chunk
 
                 response_placeholder.markdown(
-                    full_response
+                    full_response + "▌"
                 )
 
-                # Chỉ lưu lịch sử sau khi AI hoàn tất
-                st.session_state.messages.append(
-                    {
-                        "role": "user",
-                        "content": question,
-                    }
-                )
+            response_placeholder.markdown(full_response)
 
-                st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": full_response,
-                    }
-                )
+            st.session_state.messages.append(
+                {
+                    "role": "user",
+                    "content": question,
+                }
+            )
 
-            else:
-
-                response_placeholder.empty()
-
-                st.warning(
-                    "AI chưa tạo được câu trả lời. "
-                    "Cậu thử gửi lại sau nhé."
-                )
-
-        # =========================
-        # XỬ LÝ LỖI
-        # =========================
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": full_response,
+                }
+            )
 
         except Exception as error:
+            error_text = str(error).lower()
 
-            error_text = str(error)
-            error_lower = error_text.lower()
-
-            # Lỗi hết quota hoặc giới hạn API
             if (
                 "429" in error_text
-                or "resource_exhausted" in error_lower
-                or "quota" in error_lower
+                or "resource_exhausted" in error_text
+                or "quota" in error_text
             ):
-
                 st.warning(
-                    "⚠️ Gemini đã chạm giới hạn quota "
-                    "hoặc số lượt sử dụng API. "
-                    "Cậu hãy kiểm tra Google AI Studio "
-                    "hoặc chờ quota được cấp lại nhé."
+                    "AI đã chạm giới hạn lượt gọi. "
+                    "Cậu chờ một lúc rồi thử lại nhé."
                 )
 
-            # Lỗi máy chủ quá tải
             elif (
                 "503" in error_text
-                or "unavailable" in error_lower
+                or "unavailable" in error_text
             ):
-
                 st.warning(
-                    "⏳ Dịch vụ AI đang quá tải tạm thời. "
-                    "Cậu đợi một chút rồi thử lại nhé."
+                    "Dịch vụ AI đang bận. "
+                    "Cậu thử lại sau một chút nhé."
                 )
 
-            # Lỗi thời gian chờ
             elif (
-                "timeout" in error_lower
-                or "timed out" in error_lower
+                "timeout" in error_text
+                or "deadline_exceeded" in error_text
             ):
-
                 st.warning(
-                    "⌛ Yêu cầu mất quá nhiều thời gian. "
-                    "Cậu thử gửi lại sau nhé."
+                    "AI phản hồi quá thời gian chờ. "
+                    "Cậu thử lại nhé."
                 )
 
-            # Những lỗi khác
             else:
-
                 st.error(
-                    "❌ Có lỗi khi gọi AI. "
-                    "Cậu có thể mở phần bên dưới "
-                    "để kiểm tra chi tiết."
+                    "Có lỗi khi tạo câu trả lời: "
+                    + str(error)
                 )
-
-            # Chi tiết lỗi dành cho người phát triển
-            with st.expander("🔧 Chi tiết lỗi kỹ thuật"):
-                st.code(error_text)
