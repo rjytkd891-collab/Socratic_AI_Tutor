@@ -39,15 +39,14 @@ if "messages" not in st.session_state:
 # =========================
 
 if "engine" not in st.session_state:
-
     try:
         st.session_state.engine = SocraticEngine()
 
     except Exception as error:
+        st.error("Không thể khởi tạo AI.")
 
-        st.error(
-            f"Không thể khởi tạo AI: {error}"
-        )
+        with st.expander("🔧 Chi tiết lỗi kỹ thuật"):
+            st.code(str(error))
 
         st.stop()
 
@@ -81,9 +80,7 @@ with st.sidebar:
         "🔄 Bắt đầu lại",
         use_container_width=True
     ):
-
         st.session_state.messages = []
-
         st.rerun()
 
 
@@ -94,10 +91,7 @@ with st.sidebar:
 for message in st.session_state.messages:
 
     with st.chat_message(message["role"]):
-
-        st.markdown(
-            message["content"]
-        )
+        st.markdown(message["content"])
 
 
 # =========================
@@ -115,85 +109,130 @@ question = st.chat_input(
 
 if question:
 
-    # Lưu lịch sử cũ trước khi gửi câu hỏi mới
+    # Lưu lịch sử trước lượt hỏi mới
     history = st.session_state.messages.copy()
 
-
-    # -------------------------
-    # Hiển thị câu hỏi học sinh
-    # -------------------------
-
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": question,
-        }
-    )
-
+    # Hiển thị câu hỏi của học sinh
     with st.chat_message("user"):
-
         st.markdown(question)
 
-
-    # -------------------------
     # AI trả lời
-    # -------------------------
-
     with st.chat_message("assistant"):
+
+        response_placeholder = st.empty()
+        full_response = ""
 
         try:
 
-            # Placeholder để cập nhật nội dung
-            response_placeholder = st.empty()
-
-
-            # Hiển thị ngay trong lúc chờ Gemini
+            # Hiển thị trạng thái chờ
             response_placeholder.markdown(
-"🧠 **Gia sư đang suy nghĩ...**"
+                "🧠 **Gia sư đang suy nghĩ...**"
             )
 
-
-            # Biến lưu toàn bộ câu trả lời
-            full_response = ""
-
-
-            # -------------------------
+            # =========================
             # STREAMING RESPONSE
-            # -------------------------
+            # =========================
 
             for chunk in st.session_state.engine.ask_stream(
                 question=question,
                 history=history,
             ):
 
-                full_response += chunk
+                if chunk:
+                    full_response += chunk
+
+                    response_placeholder.markdown(
+                        full_response + "▌"
+                    )
+
+            # =========================
+            # HOÀN TẤT PHẢN HỒI
+            # =========================
+
+            if full_response.strip():
 
                 response_placeholder.markdown(
-                    full_response + "▌"
+                    full_response
                 )
 
+                # Chỉ lưu lịch sử sau khi AI hoàn tất
+                st.session_state.messages.append(
+                    {
+                        "role": "user",
+                        "content": question,
+                    }
+                )
 
-            # Hiển thị câu trả lời hoàn chỉnh
-            response_placeholder.markdown(
-                full_response
-            )
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": full_response,
+                    }
+                )
 
+            else:
 
-            # Lưu câu trả lời vào lịch sử
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": full_response,
-                }
-            )
+                response_placeholder.empty()
 
+                st.warning(
+                    "AI chưa tạo được câu trả lời. "
+                    "Cậu thử gửi lại sau nhé."
+                )
+
+        # =========================
+        # XỬ LÝ LỖI
+        # =========================
 
         except Exception as error:
 
-            st.error(
-                "Có lỗi khi gọi AI."
-            )
+            error_text = str(error)
+            error_lower = error_text.lower()
 
-            st.caption(
-                f"Chi tiết: {error}"
-            )
+            # Lỗi hết quota hoặc giới hạn API
+            if (
+                "429" in error_text
+                or "resource_exhausted" in error_lower
+                or "quota" in error_lower
+            ):
+
+                st.warning(
+                    "⚠️ Gemini đã chạm giới hạn quota "
+                    "hoặc số lượt sử dụng API. "
+                    "Cậu hãy kiểm tra Google AI Studio "
+                    "hoặc chờ quota được cấp lại nhé."
+                )
+
+            # Lỗi máy chủ quá tải
+            elif (
+                "503" in error_text
+                or "unavailable" in error_lower
+            ):
+
+                st.warning(
+                    "⏳ Dịch vụ AI đang quá tải tạm thời. "
+                    "Cậu đợi một chút rồi thử lại nhé."
+                )
+
+            # Lỗi thời gian chờ
+            elif (
+                "timeout" in error_lower
+                or "timed out" in error_lower
+            ):
+
+                st.warning(
+                    "⌛ Yêu cầu mất quá nhiều thời gian. "
+                    "Cậu thử gửi lại sau nhé."
+                )
+
+            # Những lỗi khác
+            else:
+
+                st.error(
+                    "❌ Có lỗi khi gọi AI. "
+                    "Cậu có thể mở phần bên dưới "
+                    "để kiểm tra chi tiết."
+                )
+
+            # Chi tiết lỗi dành cho người phát triển
+            with st.expander("🔧 Chi tiết lỗi kỹ thuật"):
+                st.code(error_text)
