@@ -1,10 +1,17 @@
 
+# ============================================================
+# SOCRATIC AI TUTOR — THE LITTLE THINKING GARDEN
+# ============================================================
+
+from pathlib import Path
 import streamlit as st
 from socratic_engine import SocraticEngine
 
-# ==================================================
-# 1. CAU HINH TRANG
-# ==================================================
+
+# ============================================================
+# 1. PAGE CONFIGURATION
+# ============================================================
+
 st.set_page_config(
     page_title="Socratic AI Tutor",
     page_icon="🌱",
@@ -12,339 +19,229 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ==================================================
-# 2. KHOI TAO SESSION STATE
-# ==================================================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
-if "draft_question" not in st.session_state:
-    st.session_state.draft_question = ""
+# ============================================================
+# 2. SESSION STATE
+# ============================================================
 
-if "draft_version" not in st.session_state:
-    st.session_state.draft_version = 0
+DEFAULTS = {
+    "messages": [],
+    "draft_question": "",
+    "draft_version": 0,
+    "editing_suggestion": False,
+    "show_project": False,
+}
 
-if "show_project" not in st.session_state:
-    st.session_state.show_project = False
+for key, value in DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
-if "engine" not in st.session_state:
-    try:
-        st.session_state.engine = SocraticEngine()
-    except Exception as error:
-        st.error("Không thể khởi tạo AI. Hãy kiểm tra API Key.")
-        st.caption(str(error))
-        st.stop()
 
-# ==================================================
-# 3. CSS - GIAO DIEN
-# ==================================================
+# ============================================================
+# 3. INITIALIZE SOCRATIC ENGINE
+# ============================================================
+
+@st.cache_resource
+def get_engine():
+    return SocraticEngine()
+
+
+try:
+    engine = get_engine()
+    engine_error = None
+except Exception as exc:
+    engine = None
+    engine_error = str(exc)
+
+
+# ============================================================
+# 4. DESIGN SYSTEM — SAGE GREEN & CREAM
+# ============================================================
+
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap');
 
     :root {
-        --cream: #F8F5EC;
-        --paper: #FFFCF5;
-        --sage-light: #E7EEDF;
-        --sage: #A6B99A;
-        --sage-dark: #708969;
-        --forest: #354D38;
-        --ink: #29352B;
-        --muted: #596653;
-        --border: #DADFCF;
+        --sage: #82977B;
+        --sage-dark: #52684F;
+        --sage-light: #E7EDE2;
+        --cream: #F8F6EF;
+        --cream-dark: #EEEBDD;
+        --ink: #29372D;
+        --muted: #687267;
+        --border: #DCE2D5;
     }
 
-    html, body, .stApp,
-    [class*="css"],
-    p, div, span, label,
-    input, textarea, button {
-        font-family: 'Be Vietnam Pro', Arial, sans-serif;
+    html, body, [class*="css"] {
+        font-family: 'Be Vietnam Pro', sans-serif;
+        color: var(--ink);
     }
 
     .stApp {
         background: var(--cream);
-        color: var(--ink);
-    }
-
-    [data-testid="stHeader"] {
-        background: rgba(248, 245, 236, 0.96);
-    }
-
-    .block-container {
-        max-width: 1250px;
-        padding: 1.2rem 1.5rem 3rem;
     }
 
     h1, h2, h3 {
-        font-family: 'Lora', Georgia, serif !important;
-        color: var(--forest);
-        font-weight: 600;
+        font-family: 'Lora', serif !important;
+        color: var(--ink);
     }
 
-    p {
-        line-height: 1.75;
+    [data-testid="stSidebar"] {
+        background: #EDF0E7;
+        border-right: 1px solid var(--border);
     }
 
-    /* Tieu de */
-    .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 16px;
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1.5rem;
     }
 
-    .brand-icon {
-        font-size: 32px;
+    [data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        text-align: left;
+        border: 1px solid #DCE2D5;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.68);
+        color: var(--ink);
+        min-height: 43px;
+        transition: all 0.2s ease;
     }
 
-    .brand-name {
-        font-family: 'Lora', Georgia, serif;
-        font-size: clamp(23px, 3vw, 34px);
-        font-weight: 600;
-        color: var(--forest);
+    [data-testid="stSidebar"] .stButton > button:hover {
+        border-color: var(--sage);
+        background: #FFFFFF;
+        color: var(--sage-dark);
     }
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(
-            180deg, #E5EBDD 0%, #DCE5D5 100%
-        );
-        border-right: 1px solid #D3DDCC;
+    .garden-header {
+        padding: 1.3rem 1.5rem;
+        border-radius: 22px;
+        background: linear-gradient(120deg, #E8EEE2, #F6F2E6);
+        border: 1px solid var(--border);
+        margin-bottom: 1.1rem;
     }
 
-    .mascot-card {
-        background: var(--paper);
+    .garden-eyebrow {
+        color: var(--sage-dark);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 0.45rem;
+    }
+
+    .garden-title {
+        font-family: 'Lora', serif;
+        font-size: clamp(1.6rem, 3vw, 2.35rem);
+        font-weight: 700;
+        line-height: 1.3;
+        color: #304332;
+        margin: 0;
+    }
+
+    .garden-subtitle {
+        color: #586658;
+        font-size: 0.95rem;
+        margin-top: 0.55rem;
+        line-height: 1.7;
+    }
+
+    .welcome-card {
+        background: #FFFFFF;
         border: 1px solid var(--border);
         border-radius: 20px;
-        padding: 16px 10px;
-        text-align: center;
-        margin-bottom: 16px;
-    }
-
-    .mascot {
-        font-size: 52px;
-        line-height: 1.3;
-    }
-
-    .mascot-title {
-        font-family: 'Lora', Georgia, serif;
-        font-size: 19px;
-        font-weight: 600;
-        color: var(--forest);
-    }
-
-    .mascot-subtitle {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 4px;
-    }
-
-    /* Banner */
-    .banner {
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(
-            110deg, #DFE9D8 0%, #F5EFDE 55%, #E8EBDD 100%
-        );
-        border: 1px solid #DCE2D3;
-        border-radius: 22px;
-        padding: 25px;
-        min-height: 145px;
-        margin-bottom: 16px;
-    }
-
-    .banner-title {
-        font-family: 'Lora', Georgia, serif;
-        font-size: clamp(25px, 3vw, 38px);
-        font-weight: 600;
-        color: var(--forest);
-        margin-bottom: 8px;
-    }
-
-    .banner-subtitle {
-        font-size: 14px;
-        color: #435540;
-        max-width: 75%;
-    }
-
-    .banner-art {
-        position: absolute;
-        right: 24px;
-        bottom: 12px;
-        font-size: 58px;
-    }
-
-    /* Welcome */
-    .welcome-card {
-        background: linear-gradient(
-            135deg, #F4F3E8, #EAF0E4
-        );
-        border: 1px solid #E0E5D8;
-        border-radius: 20px;
-        padding: 20px;
-        margin: 10px 0 16px;
+        padding: 1.35rem 1.5rem;
+        margin: 0.8rem 0 1rem 0;
+        box-shadow: 0 3px 14px rgba(53, 72, 48, 0.035);
     }
 
     .welcome-title {
-        font-family: 'Lora', Georgia, serif;
-        font-size: 24px;
-        font-weight: 600;
-        color: var(--forest);
-        margin-bottom: 5px;
+        font-family: 'Lora', serif;
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: #304332;
+        margin-bottom: 0.5rem;
     }
 
     .welcome-text {
-        font-size: 14px;
-        color: #435540;
+        color: #59665A;
+        font-size: 0.95rem;
+        line-height: 1.8;
     }
 
-    /* Chat bubbles */
+    .mascot-title {
+        font-family: 'Lora', serif;
+        font-size: 1.45rem;
+        font-weight: 700;
+        text-align: center;
+        color: #304332;
+        margin-top: 0.65rem;
+    }
+
+    .mascot-subtitle {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-top: 0.15rem;
+        margin-bottom: 1rem;
+    }
+
     [data-testid="stChatMessage"] {
-        background: var(--paper);
-        border: 1px solid var(--border);
+        background: #FFFFFF;
+        border: 1px solid #E1E5DC;
         border-radius: 18px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
     }
 
     [data-testid="stChatMessage"] p {
-        color: #29352B;
-        font-size: 15px;
-        line-height: 1.85;
-        overflow-wrap: anywhere;
+        line-height: 1.8;
+        font-size: 0.96rem;
     }
 
-    /* Expander */
-    [data-testid="stExpander"] {
-        background: var(--paper);
+    [data-testid="stChatInput"] {
+        border-color: #CAD5C4;
+        border-radius: 18px;
+    }
+
+    [data-testid="stChatInput"]:focus-within {
+        border-color: var(--sage);
+        box-shadow: 0 0 0 1px var(--sage);
+    }
+
+    .stButton > button {
+        border-radius: 13px;
+        min-height: 42px;
+    }
+
+    div[data-testid="stExpander"] {
         border: 1px solid var(--border);
         border-radius: 15px;
-        margin-bottom: 14px;
+        background: rgba(255,255,255,0.55);
     }
 
-    [data-testid="stExpander"] summary {
-        color: var(--forest);
-        font-weight: 600;
+    [data-testid="stCaptionContainer"] {
+        color: #687267;
     }
 
-    /* Buttons */
-    .stButton > button {
-        min-height: 45px;
-        white-space: normal;
-        border: 1px solid #DEDCCB;
-        border-radius: 14px;
-        background: var(--paper);
-        color: var(--ink);
-        transition: background-color 0.15s ease;
-    }
-
-    .stButton > button:hover {
-        background: #E9F0E3;
-        border-color: #B7C9AE;
-        color: var(--forest);
-    }
-
-    section[data-testid="stSidebar"] .stButton > button {
-        background: #FDFBF5;
-        border-color: #D2DDCA;
-        color: var(--forest);
-    }
-
-    /* Form input */
-    div[data-testid="stForm"] {
-        background: var(--paper);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 12px;
-    }
-
-    div[data-testid="stForm"] textarea {
-        font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
-        font-size: 15px !important;
-        line-height: 1.7;
-        color: var(--ink);
-    }
-
-    .section-label {
-        font-family: 'Lora', Georgia, serif;
-        font-size: 19px;
-        font-weight: 600;
-        color: var(--forest);
-        margin: 18px 0 10px;
-    }
-
-    /* Mobile */
     @media (max-width: 768px) {
-        .block-container {
-            padding: 0.8rem 0.75rem 2rem;
-        }
-
-        .brand {
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .brand-icon {
-            font-size: 27px;
-        }
-
-        .brand-name {
-            font-size: 24px;
-        }
-
-        .banner {
-            padding: 16px;
-            min-height: 120px;
+        .garden-header {
+            padding: 1rem;
             border-radius: 17px;
         }
 
-        .banner-title {
-            font-size: 24px;
-            max-width: 78%;
-        }
-
-        .banner-subtitle {
-            font-size: 12px;
-            max-width: 78%;
-        }
-
-        .banner-art {
-            right: 10px;
-            bottom: 10px;
-            font-size: 37px;
-        }
-
         .welcome-card {
-            padding: 15px;
-            border-radius: 16px;
+            padding: 1rem;
         }
 
-        .welcome-title {
-            font-size: 21px;
-        }
-
+        .garden-subtitle,
         .welcome-text {
-            font-size: 13px;
+            font-size: 0.9rem;
         }
 
         [data-testid="stChatMessage"] {
-            padding: 10px;
-            border-radius: 15px;
-        }
-
-        [data-testid="stChatMessage"] p {
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        .stButton > button {
-            font-size: 13px;
-            min-height: 44px;
-        }
-
-        div[data-testid="stForm"] {
-            padding: 8px;
+            padding: 0.75rem;
         }
     }
     </style>
@@ -352,275 +249,410 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ==================================================
-# 4. TIEU DE
-# ==================================================
-st.markdown(
-    """
-    <div class="brand">
-        <div class="brand-icon">🌱</div>
-        <div class="brand-name">Socratic AI Tutor</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
-# ==================================================
-# 5. SIDEBAR
-# ==================================================
+# ============================================================
+# 5. SIDEBAR — MASCOT AND NAVIGATION
+# ============================================================
+
 with st.sidebar:
+
+    mascot_path = (
+        Path(__file__).parent
+        / "assets"
+        / "mascotsidebar.png"
+    )
+
+    # Center the mascot in the sidebar.
+    if mascot_path.is_file():
+        _, center, _ = st.columns([1, 3, 1])
+
+        with center:
+            st.image(
+                str(mascot_path),
+                width=170,
+            )
+    else:
+        st.markdown(
+            '<div style="font-size:48px; text-align:center;">🐱</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown(
         """
-        <div class="mascot-card">
-            <div class="mascot">🐱</div>
-            <div class="mascot-title">Socratic AI Tutor</div>
-            <div class="mascot-subtitle">Gia sư gợi mở</div>
-        </div>
+        <div class="mascot-title">Socratic AI Tutor</div>
+        <div class="mascot-subtitle">Gia sư gợi mở 🌱</div>
         """,
         unsafe_allow_html=True,
     )
 
+    st.divider()
+
     if st.button("💬  Trò chuyện", use_container_width=True):
-        st.session_state.show_project = False
+        st.session_state.editing_suggestion = False
+        st.session_state.draft_question = ""
         st.rerun()
 
     if st.button("📖  Về dự án", use_container_width=True):
-        st.session_state.show_project = not st.session_state.show_project
+        st.session_state.show_project = (
+            not st.session_state.show_project
+        )
+        st.rerun()
 
     if st.button("＋  Cuộc trò chuyện mới", use_container_width=True):
         st.session_state.messages = []
         st.session_state.draft_question = ""
+        st.session_state.editing_suggestion = False
         st.session_state.draft_version += 1
         st.session_state.show_project = False
         st.rerun()
 
     if st.session_state.show_project:
-        st.markdown("### Về dự án")
+        st.markdown("### 🌱 Về dự án")
         st.write(
-            "Socratic AI Tutor hỗ trợ học sinh tự suy nghĩ, "
-            "tự lập luận và tự hình thành câu trả lời."
+            "Socratic AI Tutor là gia sư AI gợi mở, "
+            "hướng dẫn học sinh tự suy nghĩ, đặt câu hỏi "
+            "và xây dựng câu trả lời của riêng mình."
+        )
+        st.caption(
+            "Mục tiêu: phát triển năng lực tự học "
+            "và tư duy phản biện."
         )
 
     st.divider()
-    st.markdown("### Lịch sử gần đây")
+    st.markdown("### 🕰️ Lịch sử gần đây")
 
-    previous_questions = [
+    user_questions = [
         message["content"]
         for message in st.session_state.messages
         if message["role"] == "user"
     ]
 
-    if previous_questions:
-        for old_question in reversed(previous_questions[-5:]):
-            label = old_question[:45]
-            if len(old_question) > 45:
-                label += "…"
-            st.caption("• " + label)
+    if user_questions:
+        for question in reversed(user_questions[-5:]):
+            short_question = (
+                question[:42] + "..."
+                if len(question) > 42
+                else question
+            )
+            st.caption("💬 " + short_question)
     else:
-        st.caption("Chưa có câu hỏi nào.")
+        st.caption("Những câu hỏi của cậu sẽ xuất hiện ở đây.")
 
-# ==================================================
-# 6. BANNER
-# ==================================================
+    st.divider()
+    st.caption("Một câu hỏi tốt có thể mở ra nhiều cách nghĩ.")
+
+
+# ============================================================
+# 6. MAIN HEADER
+# ============================================================
+
 st.markdown(
     """
-    <div class="banner">
-        <div class="banner-title">Socratic AI Tutor</div>
-        <div class="banner-subtitle">
-            Tư duy sâu hơn qua câu hỏi · Tự lập luận · Tự hình thành câu trả lời
+    <div class="garden-header">
+        <div class="garden-title">Socratic AI Tutor 🌱</div>
+        <div class="garden-subtitle">
+            Không vội đưa đáp án — cùng cậu nuôi dưỡng
+            những câu hỏi và tìm ra lời giải bằng chính tư duy của mình.
         </div>
-        <div class="banner-art">📚</div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# ==================================================
-# 7. 5 CAP DO SOCRATIC - THU GON
-# ==================================================
+
+# ============================================================
+# 7. FIVE SOCRATIC LEVELS
+# ============================================================
+
 with st.expander(
     "🔍 Xem 5 cấp độ câu hỏi Socratic của Trợ lý",
     expanded=False,
 ):
-    level_col1, level_col2 = st.columns(2)
+    levels = [
+        (
+            "01 · Làm rõ vấn đề",
+            "Giúp cậu xác định điều đang được hỏi, "
+            "khái niệm và ý nghĩa của vấn đề.",
+        ),
+        (
+            "02 · Khám phá giả định",
+            "Nhận diện những điều đang được mặc định "
+            "là đúng và xem xét chúng.",
+        ),
+        (
+            "03 · Phân tích bằng chứng",
+            "Tìm căn cứ, dữ kiện và lý do hỗ trợ "
+            "cho một nhận định.",
+        ),
+        (
+            "04 · Góc nhìn đa chiều",
+            "Xem xét vấn đề từ những góc nhìn "
+            "và lập luận khác nhau.",
+        ),
+        (
+            "05 · Đánh giá hệ quả",
+            "Kết nối các ý tưởng, đánh giá hệ quả "
+            "và tự tổng hợp kết luận.",
+        ),
+    ]
 
-    with level_col1:
-        st.markdown("**1. Làm rõ vấn đề**")
-        st.caption("Xác định điều đang được hỏi.")
+    for title, description in levels:
+        st.markdown(f"**{title}**")
+        st.write(description)
 
-        st.markdown("**2. Khám phá giả định**")
-        st.caption("Nhận diện những điều đang được xem là hiển nhiên.")
 
-        st.markdown("**3. Phân tích bằng chứng**")
-        st.caption("Kiểm tra căn cứ, dẫn chứng và lí lẽ.")
+# ============================================================
+# 8. PROJECT VIEW
+# ============================================================
 
-    with level_col2:
-        st.markdown("**4. Góc nhìn đa chiều**")
-        st.caption("Xem xét các quan điểm khác nhau.")
-
-        st.markdown("**5. Đánh giá hệ quả**")
-        st.caption("Cân nhắc hệ quả và rút ra kết luận.")
-
-# ==================================================
-# 8. LOI CHAO
-# ==================================================
-if not st.session_state.messages:
+if st.session_state.show_project:
     st.markdown(
         """
         <div class="welcome-card">
-            <div class="welcome-title">Chào cậu! 🌿</div>
+            <div class="welcome-title">🌿 Một khu vườn của tư duy</div>
             <div class="welcome-text">
-                Cậu muốn tìm hiểu điều gì hôm nay?
+                Socratic AI Tutor được xây dựng để hỗ trợ học sinh
+                chủ động học tập thông qua câu hỏi gợi mở.
+                Thay vì làm bài thay người học, trợ lý khuyến khích
+                cậu giải thích suy nghĩ, xem xét bằng chứng,
+                nhận ra giả định và tự xây dựng kết luận.
+                <br><br>
+                Mỗi cuộc trò chuyện là một cơ hội để luyện tập
+                khả năng tự học và tư duy phản biện.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-# ==================================================
-# 9. HIEN THI LICH SU CHAT
-# ==================================================
-for message in st.session_state.messages:
-    avatar = "🌱" if message["role"] == "assistant" else "🐾"
 
-    with st.chat_message(message["role"], avatar=avatar):
-        st.markdown(message["content"])
+# ============================================================
+# 9. WELCOME CARD
+# ============================================================
 
-# ==================================================
-# 10. GOI Y NHANH - CHI LA PHAN MO DAU
-# ==================================================
-if not st.session_state.messages:
+if not st.session_state.messages and not st.session_state.show_project:
     st.markdown(
-        '<div class="section-label">Gợi ý bắt đầu</div>',
+        """
+        <div class="welcome-card">
+            <div class="welcome-title">Chào cậu! 🌱</div>
+            <div class="welcome-text">
+                Cậu đang muốn tìm hiểu điều gì hôm nay?
+                <br>
+                Hãy bắt đầu bằng một câu hỏi, một ý tưởng
+                hoặc điều cậu đang cảm thấy khó hiểu.
+                Tớ sẽ cùng cậu suy nghĩ từng bước.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    prompt_col1, prompt_col2 = st.columns(2)
 
-    with prompt_col1:
+# ============================================================
+# 10. CHAT HISTORY
+# ============================================================
+
+for message in st.session_state.messages:
+    role = message["role"]
+    avatar = "🌱" if role == "assistant" else "🧑‍🎓"
+
+    with st.chat_message(role, avatar=avatar):
+        st.markdown(message["content"])
+
+
+# ============================================================
+# 11. QUESTION SUGGESTIONS
+# ============================================================
+
+with st.expander("💡 Gợi ý câu hỏi để bắt đầu", expanded=False):
+    suggestions = [
+        "Giúp mình phân tích một tác phẩm văn học "
+        "mà không viết bài thay mình.",
+
+        "Làm thế nào để nhận biết một lập luận "
+        "có bằng chứng thuyết phục?",
+
+        "Mình chưa hiểu bài học hôm nay. "
+        "Hãy giúp mình tìm ra phần chưa hiểu.",
+
+        "Hãy giúp mình nhìn một vấn đề "
+        "từ nhiều góc độ khác nhau.",
+    ]
+
+    for index, suggestion in enumerate(suggestions):
         if st.button(
-            "💡 Tớ đang muốn phân tích...",
+            suggestion,
+            key=f"suggestion_{index}",
             use_container_width=True,
         ):
-            st.session_state.draft_question = "Tớ đang muốn phân tích "
+            st.session_state.draft_question = suggestion
+            st.session_state.editing_suggestion = True
             st.session_state.draft_version += 1
             st.rerun()
 
-        if st.button(
-            "✍️ Tớ đang tìm dẫn chứng về...",
-            use_container_width=True,
-        ):
-            st.session_state.draft_question = "Tớ đang tìm dẫn chứng về "
-            st.session_state.draft_version += 1
-            st.rerun()
 
-    with prompt_col2:
-        if st.button(
-            "🤔 Tớ chưa biết bắt đầu từ đâu...",
-            use_container_width=True,
-        ):
-            st.session_state.draft_question = (
-                "Tớ chưa biết bắt đầu từ đâu khi "
-            )
-            st.session_state.draft_version += 1
-            st.rerun()
+# ============================================================
+# 12. INPUT — EDITABLE SUGGESTION OR NORMAL CHAT
+# ============================================================
 
-        if st.button(
-            "💬 Tớ muốn tìm hiểu thêm về...",
-            use_container_width=True,
-        ):
-            st.session_state.draft_question = (
-                "Tớ muốn tìm hiểu thêm về "
-            )
-            st.session_state.draft_version += 1
-            st.rerun()
+question = None
 
-# ==================================================
-# 11. O NHAP TUY CHINH
-# Dung form de hoc sinh sua va bo sung cau goi y
-# ==================================================
-st.markdown('<div class="section-label">Trò chuyện</div>', unsafe_allow_html=True)
-
-with st.form(
-    key=f"question_form_{st.session_state.draft_version}",
-    clear_on_submit=True,
+if (
+    st.session_state.editing_suggestion
+    and not st.session_state.show_project
 ):
-    question_input = st.text_area(
-        "Câu hỏi của cậu",
-        value=st.session_state.draft_question,
-        placeholder="Nhập câu hỏi hoặc chia sẻ suy nghĩ của cậu...",
-        height=90,
-        label_visibility="collapsed",
+    st.markdown("#### ✏️ Chỉnh sửa câu hỏi của cậu")
+
+    with st.form(
+        key=f"suggestion_form_{st.session_state.draft_version}"
+    ):
+        edited_question = st.text_area(
+            "Cậu có thể sửa câu hỏi trước khi gửi:",
+            value=st.session_state.draft_question,
+            height=110,
+            placeholder="Nhập câu hỏi của cậu...",
+        )
+
+        col_send, col_cancel = st.columns(2)
+
+        with col_send:
+            submitted = st.form_submit_button(
+                "🌱 Gửi câu hỏi",
+                use_container_width=True,
+            )
+
+        with col_cancel:
+            cancelled = st.form_submit_button(
+                "Hủy",
+                use_container_width=True,
+            )
+
+    if cancelled:
+        st.session_state.editing_suggestion = False
+        st.session_state.draft_question = ""
+        st.rerun()
+
+    if submitted:
+        if edited_question.strip():
+            question = edited_question.strip()
+            st.session_state.editing_suggestion = False
+            st.session_state.draft_question = ""
+        else:
+            st.warning("Cậu nhập câu hỏi trước khi gửi nha.")
+
+elif not st.session_state.show_project:
+    question = st.chat_input(
+        "Nhập câu hỏi hoặc điều cậu đang băn khoăn...",
+        key="chat_input",
     )
 
-    send_clicked = st.form_submit_button(
-        "Gửi câu hỏi  ➤",
-        use_container_width=True,
-    )
 
-if send_clicked and question_input.strip():
-    question = question_input.strip()
-    history = st.session_state.messages.copy()
-    st.session_state.draft_question = ""
+# ============================================================
+# 13. GENERATE SOCRATIC RESPONSE
+# ============================================================
 
-    with st.chat_message("user", avatar="🐾"):
-        st.markdown(question)
+if question:
+    if engine is None:
+        st.error(
+            "Trợ lý chưa khởi tạo được. "
+            "Cậu kiểm tra cấu hình API và khởi động lại ứng dụng nhé."
+        )
+        if engine_error:
+            st.caption(f"Chi tiết lỗi: {engine_error}")
 
-    with st.chat_message("assistant", avatar="🌱"):
-        response_placeholder = st.empty()
-        full_response = ""
+    else:
+        st.session_state.messages.append(
+            {
+                "role": "user",
+                "content": question,
+            }
+        )
 
-        try:
-            for chunk in st.session_state.engine.ask_stream(
-                question=question,
-                history=history,
-            ):
-                if chunk:
-                    full_response += chunk
-                    response_placeholder.markdown(
-                        full_response + " ▌"
+        with st.chat_message("user", avatar="🧑‍🎓"):
+            st.markdown(question)
+
+        with st.chat_message("assistant", avatar="🌱"):
+            response_placeholder = st.empty()
+            full_response = ""
+
+            try:
+                history = st.session_state.messages[:-1]
+
+                stream = engine.ask_stream(
+                    question=question,
+                    history=history,
+                )
+
+                for chunk in stream:
+                    if chunk:
+                        full_response += str(chunk)
+                        response_placeholder.markdown(
+                            full_response + " ▌"
+                        )
+
+                if full_response.strip():
+                    response_placeholder.markdown(full_response)
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": full_response,
+                        }
+                    )
+                else:
+                    response_placeholder.warning(
+                        "Trợ lý chưa tạo được phản hồi. "
+                        "Cậu thử gửi lại câu hỏi nhé."
                     )
 
-            if full_response.strip():
-                response_placeholder.markdown(full_response)
+            except Exception as exc:
+                error_text = str(exc)
+                error_lower = error_text.lower()
 
-                st.session_state.messages.append(
-                    {"role": "user", "content": question}
-                )
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": full_response}
-                )
-            else:
-                response_placeholder.warning(
-                    "AI chưa tạo được câu trả lời. Cậu thử lại nhé."
-                )
+                if (
+                    "429" in error_text
+                    or "quota" in error_lower
+                    or "resource_exhausted" in error_lower
+                ):
+                    friendly_error = (
+                        "API đang vượt giới hạn sử dụng hoặc hết quota. "
+                        "Cậu kiểm tra hạn mức và thử lại sau nhé."
+                    )
 
-        except Exception as error:
-            error_text = str(error).lower()
+                elif (
+                    "503" in error_text
+                    or "unavailable" in error_lower
+                ):
+                    friendly_error = (
+                        "Dịch vụ AI hiện đang bận. "
+                        "Cậu đợi một chút rồi thử lại nha."
+                    )
 
-            if (
-                "429" in error_text
-                or "resource_exhausted" in error_text
-                or "quota" in error_text
-            ):
-                response_placeholder.warning(
-                    "AI đã chạm giới hạn lượt gọi. "
-                    "Cậu chờ một lúc rồi thử lại nhé."
-                )
-            elif "503" in error_text or "unavailable" in error_text:
-                response_placeholder.warning(
-                    "Dịch vụ AI đang bận. Cậu thử lại sau nhé."
-                )
-            elif "timeout" in error_text or "deadline_exceeded" in error_text:
-                response_placeholder.warning(
-                    "AI phản hồi quá thời gian chờ. Cậu thử lại nhé."
-                )
-            else:
-                response_placeholder.error(
-                    "Có lỗi khi tạo câu trả lời."
-                )
-                st.caption(str(error))
+                elif (
+                    "timeout" in error_lower
+                    or "timed out" in error_lower
+                ):
+                    friendly_error = (
+                        "Trợ lý phản hồi quá lâu. "
+                        "Cậu thử lại với câu hỏi ngắn hơn nhé."
+                    )
 
-elif send_clicked:
-    st.warning("Cậu nhập thêm nội dung rồi hãy gửi nhé.")
+                else:
+                    friendly_error = (
+                        "Đã xảy ra lỗi khi xử lý câu hỏi. "
+                        "Cậu kiểm tra kết nối và cấu hình API nhé."
+                    )
+
+                if full_response.strip():
+                    response_placeholder.markdown(full_response)
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": full_response,
+                        }
+                    )
+
+                st.error(friendly_error)
+                st.caption(f"Chi tiết kỹ thuật: {error_text}")
 
