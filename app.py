@@ -304,20 +304,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
 # ============================================================
-# 5. SIDEBAR — MASCOT AND NAVIGATION
+# 5. SIDEBAR – MASCOT AND NAVIGATION
 # ============================================================
 
 with st.sidebar:
 
+    # Đường dẫn mascot: cùng thư mục với app.py
     mascot_path = (
-        Path(__file__).parent
-        / "assets"
+        Path(__file__).resolve().parent
         / "mascotsidebar.png"
     )
 
-    # Hiển thị mascot ở giữa sidebar.
+    # Hiển thị mascot ở giữa sidebar
     if mascot_path.is_file():
         _, center, _ = st.columns([1, 3, 1])
 
@@ -332,6 +331,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
+    # Tiêu đề và phụ đề sidebar
     st.markdown(
         textwrap.dedent("""
         <div class="mascot-title">Socratic AI Tutor</div>
@@ -342,7 +342,7 @@ with st.sidebar:
 
     st.divider()
 
-    # Nút trở về màn hình trò chuyện.
+    # Nút trở về màn hình trò chuyện
     if st.button(
         "💬  Trò chuyện",
         use_container_width=True,
@@ -351,7 +351,7 @@ with st.sidebar:
         st.session_state.editing_suggestion = False
         st.rerun()
 
-    # Nút giới thiệu dự án.
+    # Nút giới thiệu dự án
     if st.button(
         "📖  Về dự án",
         use_container_width=True,
@@ -361,7 +361,7 @@ with st.sidebar:
         )
         st.rerun()
 
-    # Tạo cuộc trò chuyện mới.
+    # Tạo cuộc trò chuyện mới
     if st.button(
         "＋  Cuộc trò chuyện mới",
         use_container_width=True,
@@ -376,7 +376,7 @@ with st.sidebar:
         st.session_state.show_project = False
         st.rerun()
 
-    # Giới thiệu dự án ở sidebar.
+    # Giới thiệu dự án ở sidebar
     if st.session_state.show_project:
         st.markdown("### 🌱 Về dự án")
 
@@ -393,13 +393,13 @@ with st.sidebar:
 
     st.divider()
 
-    # Lịch sử câu hỏi gần đây.
+    # Lịch sử câu hỏi gần đây
     st.markdown("### 🕰️ Lịch sử gần đây")
 
     user_questions = [
         message.get("content", "")
         for message in st.session_state.messages
-        if message["role"] == "user"
+        if message.get("role") == "user"
         and message.get("content")
     ]
 
@@ -423,7 +423,6 @@ with st.sidebar:
     st.caption(
         "Một câu hỏi tốt có thể mở ra nhiều cách nghĩ."
     )
-
 
 # ============================================================
 # 6. MAIN HEADER
