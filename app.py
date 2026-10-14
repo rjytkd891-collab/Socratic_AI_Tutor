@@ -1,11 +1,63 @@
-
 # ============================================================
 # SOCRATIC AI TUTOR — THE LITTLE THINKING GARDEN
 # ============================================================
 
 from pathlib import Path
+import textwrap
+import io
 import streamlit as st
+from pypdf import PdfReader
+from docx import Document
 from socratic_engine import SocraticEngine
+
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def extract_uploaded_file(uploaded_file):
+    """Trích xuất PDF/DOCX/TXT hoặc trả dữ liệu ảnh cho Gemini."""
+    if uploaded_file is None:
+        return None, None, None, None
+
+    name = uploaded_file.name
+    extension = name.lower().rsplit(".", 1)[-1]
+    data = uploaded_file.getvalue()
+
+    if len(data) > MAX_FILE_SIZE:
+        raise ValueError("File vượt quá 10 MB. Cậu hãy gửi file nhỏ hơn nhé.")
+
+    if extension == "pdf":
+        reader = PdfReader(io.BytesIO(data))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        if not text.strip():
+            raise ValueError(
+                "PDF không có văn bản đọc được. Nếu là PDF scan, "
+                "cậu hãy gửi ảnh trang cần đọc nhé."
+            )
+        return text[:40000], name, None, None
+
+    if extension == "docx":
+        document = Document(io.BytesIO(data))
+        paragraphs = [p.text for p in document.paragraphs if p.text.strip()]
+        text = "\n".join(paragraphs)
+        if not text.strip():
+            raise ValueError("Tớ chưa tìm thấy văn bản trong file Word.")
+        return text[:40000], name, None, None
+
+    if extension == "txt":
+        text = data.decode("utf-8-sig", errors="replace")
+        if not text.strip():
+            raise ValueError("File TXT đang trống.")
+        return text[:40000], name, None, None
+
+    image_types = {
+        "jpg": "image/jpeg", "jpeg": "image/jpeg",
+        "png": "image/png", "webp": "image/webp",
+    }
+    if extension in image_types:
+        return None, name, data, image_types[extension]
+
+    raise ValueError("Chỉ hỗ trợ PDF, DOCX, TXT, JPG, PNG hoặc WEBP.")
 
 
 # ============================================================
@@ -31,6 +83,7 @@ DEFAULTS = {
     "editing_suggestion": False,
     "show_project": False,
     "attached_image": None,
+    "attached_document": None,
     "pending_image_send": False,
 }
 
@@ -61,7 +114,7 @@ except Exception as exc:
 # ============================================================
 
 st.markdown(
-    """
+    textwrap.dedent("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap');
 
@@ -247,7 +300,7 @@ st.markdown(
         }
     }
     </style>
-    """,
+    """),
     unsafe_allow_html=True,
 )
 
@@ -264,6 +317,7 @@ with st.sidebar:
         / "mascotsidebar.png"
     )
 
+    # Hiển thị mascot ở giữa sidebar.
     if mascot_path.is_file():
         _, center, _ = st.columns([1, 3, 1])
 
@@ -279,15 +333,16 @@ with st.sidebar:
         )
 
     st.markdown(
-        """
+        textwrap.dedent("""
         <div class="mascot-title">Socratic AI Tutor</div>
         <div class="mascot-subtitle">Gia sư gợi mở 🌱</div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
     st.divider()
 
+    # Nút trở về màn hình trò chuyện.
     if st.button(
         "💬  Trò chuyện",
         use_container_width=True,
@@ -296,6 +351,7 @@ with st.sidebar:
         st.session_state.editing_suggestion = False
         st.rerun()
 
+    # Nút giới thiệu dự án.
     if st.button(
         "📖  Về dự án",
         use_container_width=True,
@@ -305,6 +361,7 @@ with st.sidebar:
         )
         st.rerun()
 
+    # Tạo cuộc trò chuyện mới.
     if st.button(
         "＋  Cuộc trò chuyện mới",
         use_container_width=True,
@@ -313,11 +370,13 @@ with st.sidebar:
         st.session_state.draft_question = ""
         st.session_state.editing_suggestion = False
         st.session_state.attached_image = None
+        st.session_state.attached_document = None
         st.session_state.pending_image_send = False
         st.session_state.draft_version += 1
         st.session_state.show_project = False
         st.rerun()
 
+    # Giới thiệu dự án ở sidebar.
     if st.session_state.show_project:
         st.markdown("### 🌱 Về dự án")
 
@@ -333,6 +392,8 @@ with st.sidebar:
         )
 
     st.divider()
+
+    # Lịch sử câu hỏi gần đây.
     st.markdown("### 🕰️ Lịch sử gần đây")
 
     user_questions = [
@@ -349,13 +410,16 @@ with st.sidebar:
                 if len(item) > 42
                 else item
             )
+
             st.caption("💬 " + short_question)
+
     else:
         st.caption(
             "Những câu hỏi của cậu sẽ xuất hiện ở đây."
         )
 
     st.divider()
+
     st.caption(
         "Một câu hỏi tốt có thể mở ra nhiều cách nghĩ."
     )
@@ -364,16 +428,11 @@ with st.sidebar:
 # ============================================================
 # 6. MAIN HEADER
 # ============================================================
-
 st.markdown(
     """
     <div class="garden-header">
-        <div class="garden-eyebrow">
-            THE LITTLE THINKING GARDEN
-        </div>
-        <div class="garden-title">
-            Socratic AI Tutor 🌱
-        </div>
+        <div class="garden-eyebrow">THE LITTLE THINKING GARDEN</div>
+        <div class="garden-title">Socratic AI Tutor 🌱</div>
         <div class="garden-subtitle">
             Không vội đưa đáp án — cùng cậu nuôi dưỡng
             những câu hỏi và tìm ra lời giải bằng chính tư duy của mình.
@@ -382,8 +441,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
 # ============================================================
 # 7. FIVE SOCRATIC LEVELS
 # ============================================================
@@ -392,6 +449,7 @@ with st.expander(
     "🔍 Xem 5 cấp độ câu hỏi Socratic của Trợ lý",
     expanded=False,
 ):
+
     levels = [
         (
             "01 · Làm rõ vấn đề",
@@ -423,7 +481,6 @@ with st.expander(
     for title, description in levels:
         st.markdown(f"**{title}**")
         st.write(description)
-
 
 # ============================================================
 # 8. PROJECT VIEW
@@ -460,21 +517,14 @@ if (
     not st.session_state.messages
     and not st.session_state.show_project
 ):
+
+    # HTML được viết sát lề để Streamlit không hiểu nhầm nội dung bên trong
+    # thẻ div thành khối code và hiển thị nguyên văn trên giao diện.
     st.markdown(
-        """
-        <div class="welcome-card">
-            <div class="welcome-title">
-                Chào cậu! 🌱
-            </div>
-            <div class="welcome-text">
-                Cậu đang muốn tìm hiểu điều gì hôm nay?
-                <br><br>
-                Hãy bắt đầu bằng một câu hỏi, một ý tưởng
-                hoặc điều cậu đang cảm thấy khó hiểu.
-                Tớ sẽ cùng cậu suy nghĩ từng bước.
-            </div>
-        </div>
-        """,
+        """<div class="welcome-card">
+<div class="welcome-title">Chào cậu! 🌱</div>
+<div class="welcome-text">Cậu đang muốn tìm hiểu điều gì hôm nay?<br><br>Hãy bắt đầu bằng một câu hỏi, một ý tưởng hoặc điều cậu đang cảm thấy khó hiểu. Tớ sẽ cùng cậu suy nghĩ từng bước.</div>
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -484,6 +534,7 @@ if (
 # ============================================================
 
 for message in st.session_state.messages:
+
     with st.chat_message(
         message["role"],
         avatar=(
@@ -492,6 +543,8 @@ for message in st.session_state.messages:
             else "🧑‍🎓"
         ),
     ):
+
+        # Nếu tin nhắn có ảnh thì hiển thị ảnh.
         if message.get("image_bytes"):
             st.image(
                 message["image_bytes"],
@@ -502,6 +555,11 @@ for message in st.session_state.messages:
                 width=320,
             )
 
+        # Hiển thị tên tài liệu đính kèm trong lịch sử.
+        if message.get("document_name"):
+            st.caption(f"📎 Tệp đính kèm: {message['document_name']}")
+
+        # Hiển thị nội dung văn bản.
         if message.get("content"):
             st.markdown(message["content"])
 
@@ -514,6 +572,7 @@ with st.expander(
     "💡 Gợi ý câu hỏi để bắt đầu",
     expanded=False,
 ):
+
     suggestions = [
         (
             "Giúp mình phân tích một tác phẩm văn học "
@@ -534,33 +593,49 @@ with st.expander(
     ]
 
     for index, suggestion in enumerate(suggestions):
+
         if st.button(
             suggestion,
             key=f"suggestion_{index}",
             use_container_width=True,
         ):
+
             st.session_state.draft_question = suggestion
             st.session_state.editing_suggestion = True
             st.session_state.draft_version += 1
+
             st.rerun()
 
 
 # ============================================================
-# 12. INPUT — EDITABLE SUGGESTION OR CHAT INPUT
+# 12. INPUT — ATTACHMENT IN THE CHAT COMPOSER
 # ============================================================
 
 question = None
 uploaded_files = []
 
+# 13. INPUT — EDITABLE SUGGESTION OR CHAT INPUT
+# ============================================================
+
+question = None
+
+# Nếu chọn câu hỏi gợi ý thì cho phép chỉnh sửa trước khi gửi.
 if (
     st.session_state.editing_suggestion
     and not st.session_state.show_project
 ):
-    st.markdown("#### ✏️ Chỉnh sửa câu hỏi của cậu")
+
+    st.markdown(
+        "#### ✏️ Chỉnh sửa câu hỏi của cậu"
+    )
 
     with st.form(
-        key=f"suggestion_form_{st.session_state.draft_version}"
+        key=(
+            f"suggestion_form_"
+            f"{st.session_state.draft_version}"
+        )
     ):
+
         edited_question = st.text_area(
             "Cậu có thể sửa câu hỏi trước khi gửi:",
             value=st.session_state.draft_question,
@@ -588,20 +663,26 @@ if (
         st.rerun()
 
     if submitted:
+
         if edited_question.strip():
+
             question = edited_question.strip()
+
             st.session_state.editing_suggestion = False
             st.session_state.draft_question = ""
-        else:
-            st.warning("Cậu nhập câu hỏi trước khi gửi nha.")
 
+        else:
+            st.warning(
+                "Cậu nhập câu hỏi trước khi gửi nha."
+            )
+
+# Nếu không chỉnh sửa câu hỏi gợi ý thì dùng chat input.
 elif not st.session_state.show_project:
-    # Dấu cộng đính kèm nằm ngay trong ô chat.
-    # Streamlit sẽ hiển thị tệp đã chọn trong composer.
+
     chat_submission = st.chat_input(
         "Nhập câu hỏi hoặc điều cậu đang băn khoăn...",
         accept_file=True,
-        file_type=["jpg", "jpeg", "png", "webp"],
+        file_type=["pdf", "docx", "txt", "jpg", "jpeg", "png", "webp"],
         key="chat_input",
     )
 
@@ -611,54 +692,87 @@ elif not st.session_state.show_project:
             getattr(chat_submission, "files", []) or []
         )
 
-        if uploaded_files:
-            uploaded_image = uploaded_files[0]
-            st.session_state.attached_image = {
-                "bytes": uploaded_image.getvalue(),
-                "mime_type": uploaded_image.type,
-                "name": uploaded_image.name,
-            }
+        if len(uploaded_files) > 1:
+            st.error("Cậu hãy gửi từng file một nhé.")
+            question = None
+        elif uploaded_files:
+            try:
+                doc_text, doc_name, img_bytes, img_mime = extract_uploaded_file(
+                    uploaded_files[0]
+                )
+                if img_bytes is not None:
+                    st.session_state.attached_image = {
+                        "bytes": img_bytes,
+                        "mime_type": img_mime,
+                        "name": doc_name,
+                    }
+                    st.session_state.attached_document = None
+                else:
+                    st.session_state.attached_document = {
+                        "text": doc_text,
+                        "name": doc_name,
+                    }
+                    st.session_state.attached_image = None
+            except Exception as exc:
+                st.error(str(exc))
+                question = None
 
 
 # ============================================================
-# 13. GENERATE SOCRATIC RESPONSE — TEXT AND IMAGE
+# 14. IMAGE-ONLY SUBMISSION
+# Ảnh gửi không kèm chữ vẫn được xử lý ở phần tạo phản hồi bên dưới.
+if question is None and st.session_state.attached_image is not None:
+    # Không tự gửi ảnh chỉ vì ảnh còn trong state.
+    # Chỉ xử lý khi người dùng vừa gửi từ chat_input.
+    pass
+
+
+# 15. GENERATE SOCRATIC RESPONSE — TEXT AND IMAGE
 # ============================================================
 
 if question is not None:
+
     attached = st.session_state.attached_image
-
-    # Ưu tiên ảnh vừa gửi từ ô chat.
-    if uploaded_files:
-        uploaded_image = uploaded_files[0]
-        attached = {
-            "bytes": uploaded_image.getvalue(),
-            "mime_type": uploaded_image.type,
-            "name": uploaded_image.name,
-        }
-
+    document = st.session_state.attached_document
     has_image = attached is not None
+    has_document = document is not None
 
-    if not question.strip() and not has_image:
+    # Không gửi nếu câu hỏi và tệp đều trống.
+    if not question.strip() and not has_image and not has_document:
+
         st.warning(
-            "Cậu nhập câu hỏi hoặc đính kèm ảnh đề bài trước nhé."
+            "Cậu nhập câu hỏi hoặc đính kèm file/ảnh trước nhé."
         )
 
+    # Nếu engine chưa khởi tạo được.
     elif engine is None:
+
         st.error(
             "Trợ lý chưa khởi tạo được. "
             "Cậu kiểm tra cấu hình API và khởi động lại ứng dụng nhé."
         )
 
         if engine_error:
-            st.caption(f"Chi tiết lỗi: {engine_error}")
+            st.caption(
+                f"Chi tiết lỗi: {engine_error}"
+            )
 
     else:
+
+        # Nếu chỉ gửi file, tự tạo yêu cầu phù hợp.
         if not question.strip() and has_image:
             question = (
                 "Hãy đọc ảnh đề bài, xác định yêu cầu "
-                "và hướng dẫn tôi suy nghĩ theo phương pháp Socratic."
+                "và hướng dẫn tớ suy nghĩ theo phương pháp Socratic."
+            )
+        elif not question.strip() and has_document:
+            question = (
+                "Hãy đọc tài liệu đính kèm. Nếu đây là bài làm, "
+                "hãy nhận xét điểm mạnh, điểm cần cải thiện và đặt câu hỏi "
+                "giúp tớ tự sửa; không viết lại toàn bộ bài."
             )
 
+        # Lưu tin nhắn người dùng.
         user_message = {
             "role": "user",
             "content": question,
@@ -668,12 +782,18 @@ if question is not None:
             user_message["image_bytes"] = attached["bytes"]
             user_message["image_name"] = attached["name"]
 
+        if has_document:
+            user_message["document_name"] = document["name"]
+            user_message["content"] += f"\n\n📎 Tệp đính kèm: {document['name']}"
+
         st.session_state.messages.append(user_message)
 
+        # Hiển thị tin nhắn người dùng ngay lập tức.
         with st.chat_message(
             "user",
             avatar="🧑‍🎓",
         ):
+
             if has_image:
                 st.image(
                     attached["bytes"],
@@ -681,52 +801,75 @@ if question is not None:
                     width=320,
                 )
 
-            if question.strip():
-                st.markdown(question)
+            st.markdown(question)
+            if has_document:
+                st.caption(f"📎 Tệp đính kèm: {document['name']}")
 
+        # Tạo phản hồi từ Socratic AI Tutor.
         with st.chat_message(
             "assistant",
             avatar="🌱",
         ):
+
             response_placeholder = st.empty()
             full_response = ""
 
             try:
-                # Lịch sử không bao gồm câu hỏi hiện tại.
+
+                # Lịch sử không bao gồm tin nhắn vừa gửi,
+                # vì câu hỏi hiện tại đã được truyền riêng.
                 history = st.session_state.messages[:-1]
 
                 stream = engine.ask_stream(
                     question=question,
                     history=history,
                     image_bytes=(
-                        attached["bytes"] if has_image else None
+                        attached["bytes"]
+                        if has_image
+                        else None
                     ),
                     image_mime_type=(
-                        attached["mime_type"] if has_image else None
+                        attached["mime_type"]
+                        if has_image
+                        else None
                     ),
+                    document_text=(document["text"] if has_document else None),
+                    document_name=(document["name"] if has_document else None),
                 )
 
+                # Hiển thị phản hồi theo luồng.
                 for chunk in stream:
+
                     if chunk:
+
                         full_response += str(chunk)
+
                         response_placeholder.markdown(
                             full_response + " ▌"
                         )
 
                 if full_response.strip():
-                    response_placeholder.markdown(full_response)
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": full_response,
-                    })
+                    response_placeholder.markdown(
+                        full_response
+                    )
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": full_response,
+                        }
+                    )
+
                 else:
+
                     response_placeholder.warning(
                         "Trợ lý chưa tạo được phản hồi. "
                         "Cậu thử gửi lại câu hỏi nhé."
                     )
 
             except Exception as exc:
+
                 error_text = str(exc)
                 error_lower = error_text.lower()
 
@@ -735,8 +878,10 @@ if question is not None:
                     or "quota" in error_lower
                     or "resource_exhausted" in error_lower
                 ):
+
                     friendly_error = (
-                        "API đang vượt giới hạn sử dụng hoặc hết quota. "
+                        "API đang vượt giới hạn sử dụng "
+                        "hoặc hết quota. "
                         "Cậu kiểm tra hạn mức và thử lại sau nhé."
                     )
 
@@ -744,6 +889,7 @@ if question is not None:
                     "503" in error_text
                     or "unavailable" in error_lower
                 ):
+
                     friendly_error = (
                         "Dịch vụ AI hiện đang bận. "
                         "Cậu đợi một chút rồi thử lại nha."
@@ -753,27 +899,41 @@ if question is not None:
                     "timeout" in error_lower
                     or "timed out" in error_lower
                 ):
+
                     friendly_error = (
                         "Trợ lý phản hồi quá lâu. "
                         "Cậu thử lại với câu hỏi ngắn hơn nhé."
                     )
 
                 else:
+
                     friendly_error = (
                         "Đã xảy ra lỗi khi xử lý câu hỏi. "
                         "Cậu kiểm tra kết nối và cấu hình API nhé."
                     )
 
+                # Nếu đã nhận được một phần phản hồi trước khi lỗi,
+                # vẫn hiển thị và lưu phần nội dung đó.
                 if full_response.strip():
-                    response_placeholder.markdown(full_response)
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": full_response,
-                    })
+                    response_placeholder.markdown(
+                        full_response
+                    )
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": full_response,
+                        }
+                    )
 
                 st.error(friendly_error)
-                st.caption(f"Chi tiết kỹ thuật: {error_text}")
+
+                st.caption(
+                    f"Chi tiết kỹ thuật: {error_text}"
+                )
 
             finally:
+                # Xóa file đính kèm sau khi xử lý xong.
                 st.session_state.attached_image = None
+                st.session_state.attached_document = None
