@@ -30,6 +30,8 @@ DEFAULTS = {
     "draft_version": 0,
     "editing_suggestion": False,
     "show_project": False,
+    "attached_image": None,
+    "pending_image_send": False,
 }
 
 for key, value in DEFAULTS.items():
@@ -102,7 +104,7 @@ st.markdown(
         text-align: left;
         border: 1px solid #DCE2D5;
         border-radius: 14px;
-        background: rgba(255,255,255,0.68);
+        background: rgba(255, 255, 255, 0.68);
         color: var(--ink);
         min-height: 43px;
         transition: all 0.2s ease;
@@ -218,7 +220,7 @@ st.markdown(
     div[data-testid="stExpander"] {
         border: 1px solid var(--border);
         border-radius: 15px;
-        background: rgba(255,255,255,0.55);
+        background: rgba(255, 255, 255, 0.55);
     }
 
     [data-testid="stCaptionContainer"] {
@@ -262,7 +264,6 @@ with st.sidebar:
         / "mascotsidebar.png"
     )
 
-    # Center the mascot in the sidebar.
     if mascot_path.is_file():
         _, center, _ = st.columns([1, 3, 1])
 
@@ -287,32 +288,45 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("💬  Trò chuyện", use_container_width=True):
+    if st.button(
+        "💬  Trò chuyện",
+        use_container_width=True,
+    ):
+        st.session_state.show_project = False
         st.session_state.editing_suggestion = False
-        st.session_state.draft_question = ""
         st.rerun()
 
-    if st.button("📖  Về dự án", use_container_width=True):
+    if st.button(
+        "📖  Về dự án",
+        use_container_width=True,
+    ):
         st.session_state.show_project = (
             not st.session_state.show_project
         )
         st.rerun()
 
-    if st.button("＋  Cuộc trò chuyện mới", use_container_width=True):
+    if st.button(
+        "＋  Cuộc trò chuyện mới",
+        use_container_width=True,
+    ):
         st.session_state.messages = []
         st.session_state.draft_question = ""
         st.session_state.editing_suggestion = False
+        st.session_state.attached_image = None
+        st.session_state.pending_image_send = False
         st.session_state.draft_version += 1
         st.session_state.show_project = False
         st.rerun()
 
     if st.session_state.show_project:
         st.markdown("### 🌱 Về dự án")
+
         st.write(
             "Socratic AI Tutor là gia sư AI gợi mở, "
             "hướng dẫn học sinh tự suy nghĩ, đặt câu hỏi "
             "và xây dựng câu trả lời của riêng mình."
         )
+
         st.caption(
             "Mục tiêu: phát triển năng lực tự học "
             "và tư duy phản biện."
@@ -322,24 +336,29 @@ with st.sidebar:
     st.markdown("### 🕰️ Lịch sử gần đây")
 
     user_questions = [
-        message["content"]
+        message.get("content", "")
         for message in st.session_state.messages
         if message["role"] == "user"
+        and message.get("content")
     ]
 
     if user_questions:
-        for question in reversed(user_questions[-5:]):
+        for item in reversed(user_questions[-5:]):
             short_question = (
-                question[:42] + "..."
-                if len(question) > 42
-                else question
+                item[:42] + "..."
+                if len(item) > 42
+                else item
             )
             st.caption("💬 " + short_question)
     else:
-        st.caption("Những câu hỏi của cậu sẽ xuất hiện ở đây.")
+        st.caption(
+            "Những câu hỏi của cậu sẽ xuất hiện ở đây."
+        )
 
     st.divider()
-    st.caption("Một câu hỏi tốt có thể mở ra nhiều cách nghĩ.")
+    st.caption(
+        "Một câu hỏi tốt có thể mở ra nhiều cách nghĩ."
+    )
 
 
 # ============================================================
@@ -349,7 +368,12 @@ with st.sidebar:
 st.markdown(
     """
     <div class="garden-header">
-        <div class="garden-title">Socratic AI Tutor 🌱</div>
+        <div class="garden-eyebrow">
+            THE LITTLE THINKING GARDEN
+        </div>
+        <div class="garden-title">
+            Socratic AI Tutor 🌱
+        </div>
         <div class="garden-subtitle">
             Không vội đưa đáp án — cùng cậu nuôi dưỡng
             những câu hỏi và tìm ra lời giải bằng chính tư duy của mình.
@@ -409,7 +433,9 @@ if st.session_state.show_project:
     st.markdown(
         """
         <div class="welcome-card">
-            <div class="welcome-title">🌿 Một khu vườn của tư duy</div>
+            <div class="welcome-title">
+                🌿 Một khu vườn của tư duy
+            </div>
             <div class="welcome-text">
                 Socratic AI Tutor được xây dựng để hỗ trợ học sinh
                 chủ động học tập thông qua câu hỏi gợi mở.
@@ -430,14 +456,19 @@ if st.session_state.show_project:
 # 9. WELCOME CARD
 # ============================================================
 
-if not st.session_state.messages and not st.session_state.show_project:
+if (
+    not st.session_state.messages
+    and not st.session_state.show_project
+):
     st.markdown(
         """
         <div class="welcome-card">
-            <div class="welcome-title">Chào cậu! 🌱</div>
+            <div class="welcome-title">
+                Chào cậu! 🌱
+            </div>
             <div class="welcome-text">
                 Cậu đang muốn tìm hiểu điều gì hôm nay?
-                <br>
+                <br><br>
                 Hãy bắt đầu bằng một câu hỏi, một ý tưởng
                 hoặc điều cậu đang cảm thấy khó hiểu.
                 Tớ sẽ cùng cậu suy nghĩ từng bước.
@@ -449,34 +480,57 @@ if not st.session_state.messages and not st.session_state.show_project:
 
 
 # ============================================================
-# 10. CHAT HISTORY
+# 10. DISPLAY CHAT HISTORY
 # ============================================================
 
 for message in st.session_state.messages:
-    role = message["role"]
-    avatar = "🌱" if role == "assistant" else "🧑‍🎓"
+    with st.chat_message(
+        message["role"],
+        avatar=(
+            "🌱"
+            if message["role"] == "assistant"
+            else "🧑‍🎓"
+        ),
+    ):
+        if message.get("image_bytes"):
+            st.image(
+                message["image_bytes"],
+                caption=message.get(
+                    "image_name",
+                    "Ảnh đề bài",
+                ),
+                width=320,
+            )
 
-    with st.chat_message(role, avatar=avatar):
-        st.markdown(message["content"])
+        if message.get("content"):
+            st.markdown(message["content"])
 
 
 # ============================================================
 # 11. QUESTION SUGGESTIONS
 # ============================================================
 
-with st.expander("💡 Gợi ý câu hỏi để bắt đầu", expanded=False):
+with st.expander(
+    "💡 Gợi ý câu hỏi để bắt đầu",
+    expanded=False,
+):
     suggestions = [
-        "Giúp mình phân tích một tác phẩm văn học "
-        "mà không viết bài thay mình.",
-
-        "Làm thế nào để nhận biết một lập luận "
-        "có bằng chứng thuyết phục?",
-
-        "Mình chưa hiểu bài học hôm nay. "
-        "Hãy giúp mình tìm ra phần chưa hiểu.",
-
-        "Hãy giúp mình nhìn một vấn đề "
-        "từ nhiều góc độ khác nhau.",
+        (
+            "Giúp mình phân tích một tác phẩm văn học "
+            "mà không viết bài thay mình."
+        ),
+        (
+            "Làm thế nào để nhận biết một lập luận "
+            "có bằng chứng thuyết phục?"
+        ),
+        (
+            "Mình chưa hiểu bài học hôm nay. "
+            "Hãy giúp mình tìm ra phần chưa hiểu."
+        ),
+        (
+            "Hãy giúp mình nhìn một vấn đề "
+            "từ nhiều góc độ khác nhau."
+        ),
     ]
 
     for index, suggestion in enumerate(suggestions):
@@ -492,10 +546,11 @@ with st.expander("💡 Gợi ý câu hỏi để bắt đầu", expanded=False):
 
 
 # ============================================================
-# 12. INPUT — EDITABLE SUGGESTION OR NORMAL CHAT
+# 12. INPUT — EDITABLE SUGGESTION OR CHAT INPUT
 # ============================================================
 
 question = None
+uploaded_files = []
 
 if (
     st.session_state.editing_suggestion
@@ -513,15 +568,15 @@ if (
             placeholder="Nhập câu hỏi của cậu...",
         )
 
-        col_send, col_cancel = st.columns(2)
+        send_col, cancel_col = st.columns(2)
 
-        with col_send:
+        with send_col:
             submitted = st.form_submit_button(
                 "🌱 Gửi câu hỏi",
                 use_container_width=True,
             )
 
-        with col_cancel:
+        with cancel_col:
             cancelled = st.form_submit_button(
                 "Hủy",
                 use_container_width=True,
@@ -541,46 +596,114 @@ if (
             st.warning("Cậu nhập câu hỏi trước khi gửi nha.")
 
 elif not st.session_state.show_project:
-    question = st.chat_input(
+    # Dấu cộng đính kèm nằm ngay trong ô chat.
+    # Streamlit sẽ hiển thị tệp đã chọn trong composer.
+    chat_submission = st.chat_input(
         "Nhập câu hỏi hoặc điều cậu đang băn khoăn...",
+        accept_file=True,
+        file_type=["jpg", "jpeg", "png", "webp"],
         key="chat_input",
     )
 
+    if chat_submission is not None:
+        question = getattr(chat_submission, "text", "") or ""
+        uploaded_files = list(
+            getattr(chat_submission, "files", []) or []
+        )
+
+        if uploaded_files:
+            uploaded_image = uploaded_files[0]
+            st.session_state.attached_image = {
+                "bytes": uploaded_image.getvalue(),
+                "mime_type": uploaded_image.type,
+                "name": uploaded_image.name,
+            }
+
 
 # ============================================================
-# 13. GENERATE SOCRATIC RESPONSE
+# 13. GENERATE SOCRATIC RESPONSE — TEXT AND IMAGE
 # ============================================================
 
-if question:
-    if engine is None:
+if question is not None:
+    attached = st.session_state.attached_image
+
+    # Ưu tiên ảnh vừa gửi từ ô chat.
+    if uploaded_files:
+        uploaded_image = uploaded_files[0]
+        attached = {
+            "bytes": uploaded_image.getvalue(),
+            "mime_type": uploaded_image.type,
+            "name": uploaded_image.name,
+        }
+
+    has_image = attached is not None
+
+    if not question.strip() and not has_image:
+        st.warning(
+            "Cậu nhập câu hỏi hoặc đính kèm ảnh đề bài trước nhé."
+        )
+
+    elif engine is None:
         st.error(
             "Trợ lý chưa khởi tạo được. "
             "Cậu kiểm tra cấu hình API và khởi động lại ứng dụng nhé."
         )
+
         if engine_error:
             st.caption(f"Chi tiết lỗi: {engine_error}")
 
     else:
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": question,
-            }
-        )
+        if not question.strip() and has_image:
+            question = (
+                "Hãy đọc ảnh đề bài, xác định yêu cầu "
+                "và hướng dẫn tôi suy nghĩ theo phương pháp Socratic."
+            )
 
-        with st.chat_message("user", avatar="🧑‍🎓"):
-            st.markdown(question)
+        user_message = {
+            "role": "user",
+            "content": question,
+        }
 
-        with st.chat_message("assistant", avatar="🌱"):
+        if has_image:
+            user_message["image_bytes"] = attached["bytes"]
+            user_message["image_name"] = attached["name"]
+
+        st.session_state.messages.append(user_message)
+
+        with st.chat_message(
+            "user",
+            avatar="🧑‍🎓",
+        ):
+            if has_image:
+                st.image(
+                    attached["bytes"],
+                    caption=attached["name"],
+                    width=320,
+                )
+
+            if question.strip():
+                st.markdown(question)
+
+        with st.chat_message(
+            "assistant",
+            avatar="🌱",
+        ):
             response_placeholder = st.empty()
             full_response = ""
 
             try:
+                # Lịch sử không bao gồm câu hỏi hiện tại.
                 history = st.session_state.messages[:-1]
 
                 stream = engine.ask_stream(
                     question=question,
                     history=history,
+                    image_bytes=(
+                        attached["bytes"] if has_image else None
+                    ),
+                    image_mime_type=(
+                        attached["mime_type"] if has_image else None
+                    ),
                 )
 
                 for chunk in stream:
@@ -593,12 +716,10 @@ if question:
                 if full_response.strip():
                     response_placeholder.markdown(full_response)
 
-                    st.session_state.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": full_response,
-                        }
-                    )
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": full_response,
+                    })
                 else:
                     response_placeholder.warning(
                         "Trợ lý chưa tạo được phản hồi. "
@@ -646,13 +767,13 @@ if question:
                 if full_response.strip():
                     response_placeholder.markdown(full_response)
 
-                    st.session_state.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": full_response,
-                        }
-                    )
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": full_response,
+                    })
 
                 st.error(friendly_error)
                 st.caption(f"Chi tiết kỹ thuật: {error_text}")
 
+            finally:
+                st.session_state.attached_image = None
