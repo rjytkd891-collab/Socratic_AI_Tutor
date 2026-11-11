@@ -88,7 +88,7 @@
 
         <div class="btn-container">
             <!-- THAY ĐỔI LINK STREAMLIT CỦA BẠN Ở DÒNG DƯỚI ĐÂY -->
-            <a href="https://streamlit.app" class="btn">🚀 Mở Ứng Dụng Socratic AI Ngay</a>
+            <a href="https://socratic-ai-hoc-van.streamlit.app/" class="btn">🚀 Mở Ứng Dụng Socratic AI Ngay</a>
         </div>
 
         <h2>Tại sao nên chọn AI học Ngữ Văn này?</h2>
@@ -102,8 +102,7 @@
         </ul>
 
         <p style="text-align: center; margin-top: 24px;">
-            <!-- THAY ĐỔI LINK STREAMLIT CỦA BẠN Ở DÒNG DƯỚI ĐÂY -->
-            Truy cập trực tiếp tại: <a href="https://streamlit.app">https://streamlit.app</a>
+                       Truy cập trực tiếp tại: <a href="https://socratic-ai-hoc-van.streamlit.app/">https://streamlit.app</a>
         </p>
 
         <footer>
