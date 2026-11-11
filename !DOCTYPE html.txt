@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Tiêu đề và Mô tả chuẩn SEO hiển thị trực tiếp trên Google -->
+    <title>Socratic AI Tutor - AI Hỗ Trợ Học Ngữ Văn Thông Minh</title>
+    <meta name="description" content="Socratic AI Tutor là công cụ AI Tutor, AI học Ngữ Văn và AI hỗ trợ học Văn miễn phí. Ứng dụng phương pháp đặt câu hỏi gợi mở giúp học sinh tự tư duy, phân tích tác phẩm và luyện viết hiệu quả.">
+    <meta name="keywords" content="Socratic AI Tutor, Socratic AI, AI Tutor, AI học Ngữ Văn, AI học văn, AI hỗ trợ học Văn">
+    <meta name="robots" content="index, follow">
+
+    <!-- Thẻ Open Graph giúp hiển thị đẹp khi chia sẻ lên Facebook, Zalo -->
+    <meta property="og:title" content="Socratic AI Tutor - Trợ Lý AI Học Ngữ Văn">
+    <meta property="og:description" content="Khám phá Socratic AI - Công cụ AI học văn thông minh giúp gợi mở tư duy và phân tích tác phẩm văn học chuyên sâu.">
+    <meta property="og:type" content="website">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f9fafb;
+        }
+        .card {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            color: #111827;
+            font-size: 2rem;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        h2 {
+            color: #1f2937;
+            font-size: 1.35rem;
+            margin-top: 28px;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #374151;
+        }
+        .btn-container {
+            margin: 32px 0;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #ff4b4b;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.15rem;
+            padding: 16px 32px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        .btn:hover {
+            background-color: #e03e3e;
+        }
+        .features {
+            padding-left: 20px;
+        }
+        .features li {
+            margin-bottom: 10px;
+        }
+        footer {
+            margin-top: 36px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.9rem;
+            color: #6b7280;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Socratic AI Tutor - Trợ Lý AI Hỗ Trợ Học Ngữ Văn Thông Minh</h1>
+        
+        <p>Chào mừng bạn đến với <strong>Socratic AI</strong>. Đây là công cụ <strong>AI Tutor</strong> được phát triển chuyên biệt nhằm đồng hành cùng học sinh trong quá trình học tập và khám phá môn Ngữ Văn.</p>
+
+        <div class="btn-container">
+            <!-- THAY ĐỔI LINK STREAMLIT CỦA BẠN Ở DÒNG DƯỚI ĐÂY -->
+            <a href="https://streamlit.app" class="btn">🚀 Mở Ứng Dụng Socratic AI Ngay</a>
+        </div>
+
+        <h2>Tại sao nên chọn AI học Ngữ Văn này?</h2>
+        <p>Thay vì cung cấp văn mẫu có sẵn khiến người học thụ động, <strong>Socratic AI Tutor</strong> ứng dụng phương pháp đặt câu hỏi gợi mở (Socratic) để dẫn dắt học sinh tự tư duy, tìm ra luận điểm và cảm thụ sâu sắc giá trị của tác phẩm.</p>
+
+        <h2>Tính năng nổi bật của AI hỗ trợ học Văn</h2>
+        <ul class="features">
+            <li><strong>Gợi mở tư duy phản biện:</strong> Hệ thống <strong>Socratic AI</strong> đặt từng câu hỏi nhỏ giúp bạn tự phân tích nhân vật, hoàn cảnh sáng tác và nghệ thuật tu từ.</li>
+            <li><strong>Luyện tập kỹ năng viết bài:</strong> Đóng vai trò như một <strong>AI học văn</strong> cá nhân, hỗ trợ xây dựng dàn ý chi tiết và góp ý cách diễn đạt mạch lạc.</li>
+            <li><strong>Tương tác trực tiếp 24/7:</strong> Truy cập nhanh chóng ngay trên trình duyệt web mà không cần cài đặt phần mềm phức tạp.</li>
+        </ul>
+
+        <p style="text-align: center; margin-top: 24px;">
+            <!-- THAY ĐỔI LINK STREAMLIT CỦA BẠN Ở DÒNG DƯỚI ĐÂY -->
+            Truy cập trực tiếp tại: <a href="https://streamlit.app">https://streamlit.app</a>
+        </p>
+
+        <footer>
+            Từ khóa: Socratic AI Tutor • Socratic AI • AI Tutor • AI học Ngữ Văn • AI học văn • AI hỗ trợ học Văn
+        </footer>
+    </div>
+</body>
+</html>
