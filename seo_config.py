@@ -14,6 +14,7 @@ def inject_seo():
     <script>
         // Tự động cập nhật Meta Description và Keywords lên thẻ <head> chính của trang
         const metaTags = [
+            { name: "google-site-verification", content: "xM4cOWbX37NbsITsSD" },
             { name: "description", content: "Socratic AI học văn - Trợ lý AI hỗ trợ học văn, phân tích tác phẩm văn học, gợi mở tư duy phản biện và viết bài nghị luận theo phương pháp đặt câu hỏi Socratic." },
             { name: "keywords", content: "Socratic AI, Socratic AI học văn, AI học văn, hỗ trợ học văn, trợ lý AI môn Ngữ văn, phân tích văn học AI" },
             { name: "author", content: "Socratic AI Tutor" },
