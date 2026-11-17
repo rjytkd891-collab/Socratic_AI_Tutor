@@ -11,6 +11,12 @@ def inject_seo():
 
     # 2. Chèn Meta Tags & Schema JSON-LD vào thẻ <head> của trang
     seo_html = """
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-WMCL22V9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
     <script>
         // Tự động cập nhật Meta Description và Keywords lên thẻ <head> chính của trang
         const metaTags = [
