@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://socratic-ai-hoc-van.streamlit.app/sitemap.xml

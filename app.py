@@ -6,6 +6,8 @@ from pathlib import Path
 import textwrap
 import io
 import streamlit as st
+from seo_config import inject_seo
+inject_seo()
 from pypdf import PdfReader
 from docx import Document
 from socratic_engine import SocraticEngine
@@ -58,19 +60,6 @@ def extract_uploaded_file(uploaded_file):
         return None, name, data, image_types[extension]
 
     raise ValueError("Chỉ hỗ trợ PDF, DOCX, TXT, JPG, PNG hoặc WEBP.")
-
-
-# ============================================================
-# 1. PAGE CONFIGURATION
-# ============================================================
-
-st.set_page_config(
-    page_title="Socratic AI Tutor",
-    page_icon="🌱",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 
 # ============================================================
 # 2. SESSION STATE
